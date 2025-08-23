@@ -1,0 +1,41 @@
+name: CI/CD DevOps Final
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: ✅ Ejecutar pruebas
+        run: |
+          pytest --maxfail=1 --disable-warnings -q
+
+      - name: 🐳 Login DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 🐳 Build y Push imagen a DockerHub
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/entregafinal-devops:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/entregafinal-devops:latest
+
+      - name: 🚀 Deploy a Render
+        run: |
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
